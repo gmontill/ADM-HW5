@@ -44,7 +44,6 @@ class Graph:
         """
         
         print(f"Graph with {len(self.nodes)} nodes and {len(self.edges)} edges")
-        return
     
     def add_node(self, label):
         """
@@ -117,19 +116,20 @@ def test_graph(G, Gx):
         None
     """
     
+    # same number of nodes?
+    if set(G.nodes.keys()).difference(set(Gx.nodes)):
+        print("Bad graph! Too few/many nodes")
+        return
+    
+    # same neighbors for each node?
     for node in G.nodes.keys():
         node = str(node)
-        if len(G.neighbors[node]) != len(Gx[node]):
-            print("Bad graph")
+        if G.neighbors[node].difference(set(Gx.neighbors(node))):
+            print(f"Bad graph! Too few/many neighbors for node '{node}'")
             return
 
-    for node in Gx.nodes.keys():
-        node = str(node)
-        if len(G.neighbors[node]) != len(Gx[node]):
-            print("Bad graph")
-            return
-        
     print("OK! Same graph")
+    
     return
 
 
