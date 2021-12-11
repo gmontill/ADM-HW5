@@ -66,15 +66,12 @@ class Graph:
     
     def add_edge(self, src, tgt):
         """
-        Adds an edge between a source and a target node,
-        and adds some attributes in a dictionary 'attr' 
-        to that edge;
+        Adds an edge between a source and a target node;
         if one or both nodes are not already in the graph
         they will be added
         
         Arguments
             src, tgt : (int), (str) or whatever other object
-            attr     : (dict) attributes of this edge
             
         Returns
             None
@@ -158,8 +155,7 @@ def graph_from_df(df, kind = "custom"):
     else:
         G = Graph()
     
-    for idx in df.index:
-        
+    for idx in df.index: 
         row = df.iloc[idx]
         
         src = str(row["src"])
@@ -203,7 +199,7 @@ def merge_edges(a, b):
     if not b:
         return a
     
-    c = a
+    c = a.copy()
         
     # for every key in the 'b' dictionary
     # checks if that key was already present in 'a'
