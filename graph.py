@@ -161,10 +161,11 @@ def graph_from_df(df, kind = "custom"):
         src = str(row["src"])
         tgt = str(row["tgt"])
         
-        G.add_edge(src, tgt)
+        if src != tgt:
+            G.add_edge(src, tgt)
         
-        G[src][tgt]["time"] = row["timestamp"]
-        G[src][tgt]["weight"] = 1
+            G[src][tgt]["time"] = row["timestamp"]
+            G[src][tgt]["weight"] = 1
         
     return G
 
