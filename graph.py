@@ -1,5 +1,8 @@
 import pandas as pd
+import numpy as np
+import random
 import networkx as nx
+import matplotlib.pyplot as plt
 
 
 class Graph:
@@ -67,7 +70,10 @@ class Graph:
         """
         Adds an edge between a source and a target node;
         if one or both nodes are not already in the graph
-        they will be added
+        they will be added;
+        if there is already an edge between two nodes,
+        then the one going the opposite way is discarded
+        (i.e. the edge added before has priority)
         
         Arguments
             src, tgt : (int), (str) or whatever other object
@@ -79,18 +85,34 @@ class Graph:
         src = str(src)
         tgt = str(tgt)
         
+        # if there is already an edge (tgt -> src)
+        # then don't add this one (src –> tgt)
+        try:
+            if self.nodes[tgt][src]:
+                return
+        except:
+            pass
+        
+        # if the src node already exists in the graph
+        # then add tgt to its neighbors,
+        # otherwise create it first
         try:
             self.neighbors[src].add(tgt)
         except KeyError:
             self.add_node(src)
             self.neighbors[src].add(tgt)
             
+        # if the tgt node already exists in the graph
+        # then add src to its neighbors,
+        # otherwise create it first
         try:
             self.neighbors[tgt].add(src) 
         except KeyError:
             self.add_node(tgt)
             self.neighbors[tgt].add(src)
 
+        # create an edge with direction
+        # (src —> tgt)
         self.nodes[src][tgt] = {}
         
         self.edges.append((src, tgt))
@@ -128,7 +150,7 @@ def test_graph(G, Gx):
             print(f"Bad graph! Too few/many neighbors for node '{node}'")
             return
 
-    print("OK! Same graph")
+    print("OK! Same nodes and neighbors")
     
     return
 
@@ -162,10 +184,15 @@ def graph_from_df(df, kind = "custom"):
         tgt = str(row["tgt"])
         
         if src != tgt:
+            
             G.add_edge(src, tgt)
-        
-            G[src][tgt]["time"] = row["timestamp"]
-            G[src][tgt]["weight"] = 1
+            
+            try:
+                G[src][tgt]["time"] = row["timestamp"]
+                G[src][tgt]["weight"] = 1
+            except KeyError:
+                pass
+                
         
     return G
 
@@ -208,14 +235,16 @@ def merge_edges(a, b):
     # than what was already present, and in that case replaces it
     # and sums the weights of the two;
     # if not already present then adds it
-    for k in b.keys():
-        
-        try:     
-            if b[k]["time"] < c[k]["time"]: 
-                c[k] = {"time": b[k]["time"], 
-                        "weight": a[k]["weight"] + b[k]["weight"]}
-        except KeyError:     
-            c[k] = {"time": b[k]["time"], "weight": b[k]["weight"]}
+    for k in b.keys():    
+        try:         
+            if b[k]["time"] < c[k]["time"]:
+                c[k]["time"] = b[k]["time"]
+                c[k]["weight"] = a[k]["weight"] + b[k]["weight"]
+                
+        except KeyError:            
+            c[k] = {}
+            c[k]["time"] = b[k]["time"]
+            c[k]["weight"] = b[k]["weight"]
 
     return c
     
@@ -258,11 +287,95 @@ def merge_graphs(G, J):
         # add those edges to the new graph
         for tgt in node_edges:
             new_graph.add_edge(src, tgt)
-            new_graph[src][tgt]["time"] = node_edges[tgt]["time"]
-            new_graph[src][tgt]["weight"] = node_edges[tgt]["weight"]
-    
+            try:
+                new_graph[src][tgt]["time"] = node_edges[tgt]["time"]
+                new_graph[src][tgt]["weight"] = node_edges[tgt]["weight"]
+            except KeyError:
+                pass
+            
     return new_graph    
         
 
+def plot_neighbors(G, central_node, 
+                   neighbors=[], max_neighbors=12, figsize=(8, 8)):
+    """
+    Plots a subset of the neighbors of a given node
+    with the corresponding edges
+    
+    Arguments
+        G             : graph
+        central_node  : (str) a node
+        neighbors     : (list of str) subset of neighbors of 'central_node'
+        max_neighbors : if 'neighbors' is not provided,
+                        max number of random neighbors of 'central_node'
+                        to be plotted
+        figsize       : (tup) figsize of the plot
+    Returns
+        matplotlib.pyplot object
+    """
 
+    if neighbors:
+        neighbors = list(map(str, neighbors))
+    else:
+        neighbors = random.sample(list(G.neighbors[central_node]), 
+                                  max_neighbors)
 
+    # nodes for which 'central_node' is the source
+    target_nodes = [node for node in neighbors
+                    if node in G[central_node].keys()]
+    
+    # nodes for which 'central_node' is the target
+    source_nodes = [node for node in neighbors
+                    if node not in target_nodes]
+
+    # angle such that the neighboring nodes
+    # will be equidistant around the circle
+    # with center the 'central_node'
+    angle = 2 * np.pi / len(neighbors)
+    
+    # coordinates [0,1] and label of those points
+    points = [(np.cos(idx * angle), np.sin(idx * angle), label) 
+              for idx, label in enumerate(neighbors)]
+    
+    points.append((0, 0, central_node))
+    
+    plt.figure(figsize = figsize)
+    plt.title(f"Neighbors of {central_node}\n")
+    plt.rc('axes', titlesize=20) 
+    plt.rc('font', size=15)
+    
+    plt.xlim((-1.2,1.2))
+    plt.ylim((-1.2,1.2))
+    
+    # arrows
+    for x, y, label in points[:-1]:
+        
+        #segment
+        plt.plot([x, 0] ,[y, 0], 
+                 color="black",
+                 linewidth=1.2)
+        
+        # True if the arrow has to go from the neighbor
+        # to the central_node, False if opposite direction
+        to_center = True if label in source_nodes else False
+        
+        # arrows
+        if to_center:
+            plt.arrow(x, y, x/2-x, y/2-y,
+                      width=0.024,                    
+                      length_includes_head = False,
+                      edgecolor="white", facecolor="black")
+        else:
+            plt.arrow(0, 0, x-x/2, y-y/2,
+                      width=0.024,
+                      length_includes_head = False,
+                      edgecolor="white", facecolor="black")   
+    
+    # nodes and labels
+    for x, y, label in points:
+        plt.plot(x, y, marker="o", markersize=60)
+        plt.text(x, y, label)         
+        
+    plt.axis('off')
+    
+    return plt
