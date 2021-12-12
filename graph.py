@@ -134,6 +134,9 @@ class Graph:
         self.edges.append((src, tgt))
         
         return
+    
+    def degree(self, node):
+        return len(self.nodes[node])
 
     
 def test_graph(G, Gx):
@@ -171,7 +174,7 @@ def test_graph(G, Gx):
     return
 
 
-def graph_from_df(df, kind = "custom"):
+def graph_from_df(df, kind="custom", graph_name=""):
     """
     Fills a graph from a dataframe
     with a 'src' column containing
@@ -192,6 +195,7 @@ def graph_from_df(df, kind = "custom"):
         G = nx.Graph()
     else:
         G = Graph()
+        G.name = graph_name
     
     # improve 
     for idx in df.index: 
@@ -211,6 +215,40 @@ def graph_from_df(df, kind = "custom"):
  
     return G
 
+
+def is_directed(G):
+    """
+    Checks whether a graph is directed
+    or undirected
+    
+    Arguments
+        G : graph
+    
+    Returns
+        (bool)
+    """
+    
+    for u, v in G.edges:
+        if (v, u) not in G.edges:
+            return True
+        
+    return False
+
+
+def is_dense(G):
+    """
+    Checks whether a graph is dense (|E| ~ |V|^2)
+    or sparse (|E| << |V|^2)
+    
+    Arguments
+        G : graph
+        
+    Returns
+        (bool)
+    """
+    
+    return len(G.edges) >= 0.5 * len(G.nodes)
+ 
 
 def merge_edges(a, b):
     """
@@ -470,3 +508,4 @@ def plot_neighbors(G, central_node,
     plt.axis('off')
     
     return plt
+
