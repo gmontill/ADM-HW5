@@ -28,6 +28,9 @@ class Graph:
         # list of the pairs (source node, target node)
         self.edges = []
         
+        # whether the graph is directed or undirected
+        self.directed = True
+        
         return
     
     def __getitem__(self, label):
@@ -36,6 +39,12 @@ class Graph:
         i.e. the dictionary containing all of
         its target nodes and timestamps and weights
         of each of those edges
+        
+        Arguments
+            label : (int), (str) or whatever other object
+            
+        Returns
+            (dict)
         """
         
         return self.nodes[str(label)]
@@ -46,7 +55,13 @@ class Graph:
         with the total number of nodes and edges
         """
         
-        print(f"Graph with {len(self.nodes)} nodes and {len(self.edges)} edges")
+        if self.directed:
+            print(f"Directed graph with {len(self.nodes)} nodes and {len(self.edges)} edges")
+        else:
+            # since (u,v) and (v,u) constitute one edge
+            # the length of 'self.edges' has to be halved
+            print(f"Undirected graph with {len(self.nodes)} nodes and {0.5 * len(self.edges):.0f} edges")
+            
     
     def add_node(self, label):
         """
@@ -85,10 +100,11 @@ class Graph:
         src = str(src)
         tgt = str(tgt)
         
-        # if there is already an edge (tgt -> src)
+        # if the graph is directed
+        # and there is already an edge (tgt -> src)
         # then don't add this one (src –> tgt)
         try:
-            if self.nodes[tgt][src]:
+            if self.directed and self.nodes[tgt][src]:
                 return
         except:
             pass
@@ -177,23 +193,22 @@ def graph_from_df(df, kind = "custom"):
     else:
         G = Graph()
     
+    # improve 
     for idx in df.index: 
         row = df.iloc[idx]
         
         src = str(row["src"])
         tgt = str(row["tgt"])
         
-        if src != tgt:
-            
-            G.add_edge(src, tgt)
-            
+        # ignore loops
+        if src != tgt:           
+            G.add_edge(src, tgt)         
             try:
                 G[src][tgt]["time"] = row["timestamp"]
                 G[src][tgt]["weight"] = 1
             except KeyError:
                 pass
-                
-        
+ 
     return G
 
 
@@ -257,10 +272,10 @@ def merge_graphs(G, J):
     was in both graph or just in one
     
     Arguments
-        G, J : graphs
+        G, J      : graphs
     
     Returns
-        merged graph
+        new_graph : merged graph G U J
     """
     
     new_graph = Graph()
@@ -293,7 +308,63 @@ def merge_graphs(G, J):
             except KeyError:
                 pass
             
-    return new_graph    
+    return new_graph
+
+
+def undirected_graph(G):
+    """
+    Turns a directed graph G into 
+    an undirected one
+    
+    Arguments
+        G  : directed graph
+        
+    Returns
+        Gu : undirected version of G
+    """
+    
+    if not G.directed:
+        return G
+    
+    Gu = Graph()
+    Gu.directed = False
+    
+    for node in G.nodes.keys():
+        
+        for neigh in G.neighbors[node]:
+            
+            # for each pair (node, neighbor)
+            # adds an edge (node –> neighbor)
+            # and an edge (neighbor –> node)
+            # unless they were already added earlier
+            
+            try:
+                if Gu[node][neigh]:
+                    pass        
+            except KeyError:       
+                Gu.add_edge(node, neigh)    
+                
+                try:
+                    Gu[node][neigh]["time"] = G[node][neigh]["time"]
+                    Gu[node][neigh]["weight"] = G[node][neigh]["weight"]  
+                except KeyError:
+                    Gu[node][neigh]["time"] = G[neigh][node]["time"]
+                    Gu[node][neigh]["weight"] = G[neigh][node]["weight"]  
+            
+            try:
+                if Gu[neigh][node]:
+                    pass       
+            except KeyError:    
+                Gu.add_edge(neigh, node) 
+                
+                try:
+                    Gu[neigh][node]["time"] = G[neigh][node]["time"]
+                    Gu[neigh][node]["weight"] = G[neigh][node]["weight"] 
+                except KeyError:
+                    Gu[neigh][node]["time"] = G[node][neigh]["time"]
+                    Gu[neigh][node]["weight"] = G[node][neigh]["weight"] 
+            
+    return Gu
         
 
 def plot_neighbors(G, central_node, 
@@ -302,21 +373,35 @@ def plot_neighbors(G, central_node,
     Plots a subset of the neighbors of a given node
     with the corresponding edges
     
+    Remark: this plot will only show the edges between
+            the central node and its neighbors,
+            ignoring those between the neighbors only
+    
     Arguments
         G             : graph
         central_node  : (str) a node
         neighbors     : (list of str) subset of neighbors of 'central_node'
-        max_neighbors : if 'neighbors' is not provided,
+        max_neighbors : (int) if 'neighbors' is not provided,
                         max number of random neighbors of 'central_node'
                         to be plotted
         figsize       : (tup) figsize of the plot
+        
     Returns
         matplotlib.pyplot object
     """
+    
+    ######### determine which nodes/edges to plot
+    ######### and what coords they should have
 
     if neighbors:
+        
         neighbors = list(map(str, neighbors))
+        
     else:
+        
+        if max_neighbors > len(G.neighbors[central_node]):
+            max_neighbors = len(G.neighbors[central_node])
+
         neighbors = random.sample(list(G.neighbors[central_node]), 
                                   max_neighbors)
 
@@ -339,37 +424,43 @@ def plot_neighbors(G, central_node,
     
     points.append((0, 0, central_node))
     
-    plt.figure(figsize = figsize)
-    plt.title(f"Neighbors of {central_node}\n")
+    ######### PLOT
+    
+    plt.figure(figsize=figsize)
+    plt.title(f"Neighbors of {central_node}")
     plt.rc('axes', titlesize=20) 
     plt.rc('font', size=15)
     
     plt.xlim((-1.2,1.2))
     plt.ylim((-1.2,1.2))
     
-    # arrows
+    # ALSO ADD WEIGHTS TO THE VISUALIZATION?
+    
+    # arrows/segments
     for x, y, label in points[:-1]:
         
-        #segment
+        # segment from the center to (x,y)
         plt.plot([x, 0] ,[y, 0], 
                  color="black",
                  linewidth=1.2)
         
-        # True if the arrow has to go from the neighbor
-        # to the central_node, False if opposite direction
-        to_center = True if label in source_nodes else False
-        
-        # arrows
-        if to_center:
-            plt.arrow(x, y, x/2-x, y/2-y,
-                      width=0.024,                    
-                      length_includes_head = False,
-                      edgecolor="white", facecolor="black")
-        else:
-            plt.arrow(0, 0, x-x/2, y-y/2,
-                      width=0.024,
-                      length_includes_head = False,
-                      edgecolor="white", facecolor="black")   
+        # if the graph is directed
+        # also add arrows
+        if G.directed:      
+            # True if the arrow has to go from the neighbor
+            # to the central_node, False if opposite direction
+            to_center = True if label in source_nodes else False
+            
+            if to_center:
+                plt.arrow(x, y, -x/2, -y/2,
+                          width=0.024,                    
+                          length_includes_head=False,
+                          edgecolor="white", facecolor="black")
+            else:
+                plt.arrow(0, 0, x/2, y/2,
+                          width=0.024,
+                          length_includes_head=False,
+                          edgecolor="white", facecolor="black")   
     
     # nodes and labels
     for x, y, label in points:
