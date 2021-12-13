@@ -62,7 +62,63 @@ def overall_features(G):
     density = [G.degree(node) for node in G.nodes.keys()]
         
     return table, density
+   
+def shortest_path(G, start, goal):
+    seen = []
+    queue = [[start]]
+    if start == goal:
+        print("Start and Goal are the same Node!")
+        return
+    while queue:
+        path = queue.pop(0)
+        node = path[-1]
+        
+        if node not in seen:
+            neighbours = G[node]
+            for neighbour in neighbours:
+                new = list(path)
+                new.append(neighbour)
+                queue.append(new)
+                if neighbour == goal:
+                    print(*new)
+                    return new, len(new)
+            seen.append(node)
+    print("A connecting path does not exists")
+    return
+ 
+def beetweenness():
+   
+def closeness(G, u):
+    summ = 0
+    for v in G.nodes:
+        path, distance = shortest_path(G, u, v)
+        if(distance != 0):
+            summ += distance
+    if(summ > 0): 
+        return((len(G.nodes)-1)/summ)
+    else:
+        print("Denominator = 0")
+        return
+
+def best_users(G, time_interval, metric, v):
+    '''
+    Returns the value of the given 
+    metric applied over the complete 
+    graph for the given interval of
+    time
+    '''
+    summ_v = 0
+    summ = 0
     
-    
-def best_users(G, time_interval, metric):
-    pass
+    for p1 in G.nodes:
+        for p2 in G.nodes:
+            if(pd.to_datetime(G.nodes[p1][p2]['time'], format='%Y-%m-%d') < time_interval[0]
+               and pd.to_datetime(G.nodes[p1][p2]['time'], format='%Y-%m-%d') > time_interval[1]):
+                break
+            path, distance = shortest_path(G, p1, p2)
+            if(distance != 0 or distance != float('inf')):
+                summ += distance
+                if(v in path):
+                    summ_v += distance
+                
+            
