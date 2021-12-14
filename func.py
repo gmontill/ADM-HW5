@@ -2,7 +2,7 @@ import pandas as pd
 import graph
 
 
-def func_selector(G, func_num):
+def func_selector(df, func_num):
     """
     Interface to select which
     functionality of this module use
@@ -14,9 +14,10 @@ def func_selector(G, func_num):
     Returns
         output of selected functionality
     """
+    filtered_df = df.copy()
     
     if func_num == 1:
-        
+        G = graph.graph_from_df(df)
         return overall_features(G)
         
     elif func_num == 2:
@@ -27,9 +28,14 @@ def func_selector(G, func_num):
         time_start = pd.to_datetime(input("Time start [yyyy-mm-dd]"), format='%Y-%m-%d')
         time_end = pd.to_datetime(input("Time end [yyyy-mm-dd]"), format='%Y-%m-%d')
         
+        
+        filtered_df = filtered_df[(filtered_df["time"] > time_start) & (filtered_df["time"] < time_end)]
+        
+        G = graph.graph_from_df(filtered_df)
+        
         metric = input("Metric [btw | pagerank | cc | dc]")
         
-        return best_users(G, [time_start, time_end], metric)
+        return best_users(G, [time_start, time_end], metric, node)
         
     elif func_num == 3:
         pass
@@ -81,44 +87,55 @@ def shortest_path(G, start, goal):
                 queue.append(new)
                 if neighbour == goal:
                     print(*new)
-                    return new, len(new)
+                    return new
             seen.append(node)
     print("A connecting path does not exists")
     return
  
-def beetweenness():
-   
+def beetweenness(G, v):
+    summ_v = 0
+    summ = 0
+    count = 0
+    
+    for p1 in G.nodes:
+        for p2 in G.nodes:
+            path = shortest_path(G, p1, p2)
+            if(len(path) != float('inf') or len(path) != 0):
+                summ += 1
+                if(v in path):
+                    summ_v += count
+            else:
+                print("Not possible to compute the betweeness, an error occurred: denominator is zero!")
+                return
+    return summ_v/summ
+
 def closeness(G, u):
     summ = 0
     for v in G.nodes:
         path, distance = shortest_path(G, u, v)
         if(distance != 0):
             summ += distance
-    if(summ > 0): 
+    if(summ != 0): 
         return((len(G.nodes)-1)/summ)
     else:
         print("Denominator = 0")
         return
 
-def best_users(G, time_interval, metric, v):
+def deg_cent(G, v):
+    return G.degree(v)/len(G.nodes)
+
+def best_users(G, time_interval, metric, node):
     '''
     Returns the value of the given 
     metric applied over the complete 
     graph for the given interval of
     time
     '''
-    summ_v = 0
-    summ = 0
+    if(metric == 'btw'): return beetweenness(G, time_interval, node)
+    elif(metric == 'cc'): return closeness(G,time_interval, node)
+    elif(metric == 'pagerank'): return pagerank()
+    elif(metric == 'dc'):return degree_cent()
+        
     
-    for p1 in G.nodes:
-        for p2 in G.nodes:
-            if(pd.to_datetime(G.nodes[p1][p2]['time'], format='%Y-%m-%d') < time_interval[0]
-               and pd.to_datetime(G.nodes[p1][p2]['time'], format='%Y-%m-%d') > time_interval[1]):
-                break
-            path, distance = shortest_path(G, p1, p2)
-            if(distance != 0 or distance != float('inf')):
-                summ += distance
-                if(v in path):
-                    summ_v += distance
                 
             
