@@ -1,8 +1,21 @@
 import pandas as pd
 import graph
 
+def filter_graph_by_time(G, time_interval):
+    
+    Gf = graph.Graph()
+    
+    time_start = time_interval[0]
+    time_end = time_interval[1]
+    
+    for (u,v) in G.edges:
+        if G[u][v]["time"] > time_start and G[u][v]["time"] < time_end:
+            Gf.add_edge(u, v)
+            Gf[u][v] = G[u][v]
+            
+    return Gf
 
-def func_selector(df, func_num):
+def func_selector(G, func_num):
     """
     Interface to select which
     functionality of this module use
@@ -14,10 +27,7 @@ def func_selector(df, func_num):
     Returns
         output of selected functionality
     """
-    filtered_df = df.copy()
-    
     if func_num == 1:
-        G = graph.graph_from_df(df)
         return overall_features(G)
         
     elif func_num == 2:
@@ -28,14 +38,13 @@ def func_selector(df, func_num):
         time_start = pd.to_datetime(input("Time start [yyyy-mm-dd]"), format='%Y-%m-%d')
         time_end = pd.to_datetime(input("Time end [yyyy-mm-dd]"), format='%Y-%m-%d')
         
+        time_int = (time_start, time_end)
         
-        filtered_df = filtered_df[(filtered_df["time"] > time_start) & (filtered_df["time"] < time_end)]
-        
-        G = graph.graph_from_df(filtered_df)
+        Gf = filter_graph_by_time(G, time_int)
         
         metric = input("Metric [btw | pagerank | cc | dc]")
         
-        return best_users(G, [time_start, time_end], metric, node)
+        return best_users(Gf, metric, node)
         
     elif func_num == 3:
         pass
@@ -73,7 +82,6 @@ def shortest_path(G, start, goal):
     seen = []
     queue = [[start]]
     if start == goal:
-        print("Start and Goal are the same Node!")
         return
     while queue:
         path = queue.pop(0)
@@ -82,14 +90,13 @@ def shortest_path(G, start, goal):
         if node not in seen:
             neighbours = G[node]
             for neighbour in neighbours:
+                print(neighbour)
                 new = list(path)
                 new.append(neighbour)
                 queue.append(new)
                 if neighbour == goal:
-                    print(*new)
                     return new
             seen.append(node)
-    print("A connecting path does not exists")
     return
  
 def beetweenness(G, v):
@@ -100,14 +107,18 @@ def beetweenness(G, v):
     for p1 in G.nodes:
         for p2 in G.nodes:
             path = shortest_path(G, p1, p2)
-            if(len(path) != float('inf') or len(path) != 0):
+            if(path and (len(path) != float('inf') or len(path) != 0)):
+                print(len(path))
+                print(path)
                 summ += 1
                 if(v in path):
                     summ_v += count
             else:
-                print("Not possible to compute the betweeness, an error occurred: denominator is zero!")
-                return
-    return summ_v/summ
+                break
+    if(summ != 0):
+        return summ_v/summ
+    else:
+        print('errore, denominatore = 0')
 
 def closeness(G, u):
     summ = 0
@@ -124,17 +135,17 @@ def closeness(G, u):
 def deg_cent(G, v):
     return G.degree(v)/len(G.nodes)
 
-def best_users(G, time_interval, metric, node):
+def best_users(G, metric, node):
     '''
     Returns the value of the given 
     metric applied over the complete 
     graph for the given interval of
     time
     '''
-    if(metric == 'btw'): return beetweenness(G, time_interval, node)
-    elif(metric == 'cc'): return closeness(G,time_interval, node)
+    if(metric == 'btw'): return beetweenness(G, node)
+    elif(metric == 'cc'): return closeness(G, node)
     elif(metric == 'pagerank'): return pagerank()
-    elif(metric == 'dc'):return degree_cent()
+    elif(metric == 'dc'):return deg_cent(G, node)
         
     
                 
