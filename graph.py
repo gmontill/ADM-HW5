@@ -31,6 +31,8 @@ class Graph:
         # whether the graph is directed or undirected
         self.directed = True
         
+        self.pagerank = {}
+        
         return
     
     def __getitem__(self, label):
@@ -78,6 +80,8 @@ class Graph:
         
         self.nodes[label] = {}
         self.neighbors[label] = set()
+        
+        self.pagerank[label] = 0
         
         return
     
@@ -137,6 +141,9 @@ class Graph:
     
     def degree(self, node):
         return len(self.nodes[node])
+    
+    def __len__(self):
+        return len(self.nodes.keys())
 
     
 def test_graph(G, Gx):
@@ -192,7 +199,7 @@ def graph_from_df(df, kind="custom", graph_name=""):
     """
     
     if kind == "nx" or kind == "networkx":
-        G = nx.Graph()
+        G = nx.DiGraph()
     else:
         G = Graph()
         G.name = graph_name

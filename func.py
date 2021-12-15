@@ -133,7 +133,8 @@ def closeness(G, u):
         return
 
 def deg_cent(G, v):
-    return G.degree(v)/len(G.nodes)
+    s = 1.0 / (len(G) - 1)
+    return s * G.degree(v)
 
 def best_users(G, metric, node):
     '''
