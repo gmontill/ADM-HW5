@@ -31,9 +31,10 @@ class Graph:
         # whether the graph is directed or undirected
         self.directed = True
         
-        self.pagerank = {}
-        
         return
+    
+    def __len__(self):
+        return len(self.nodes.keys())
     
     def __getitem__(self, label):
         """
@@ -80,8 +81,6 @@ class Graph:
         
         self.nodes[label] = {}
         self.neighbors[label] = set()
-        
-        self.pagerank[label] = 0
         
         return
     
@@ -140,10 +139,7 @@ class Graph:
         return
     
     def degree(self, node):
-        return len(self.nodes[node])
-    
-    def __len__(self):
-        return len(self.nodes.keys())
+        return len(self.neighbors[node])
 
     
 def test_graph(G, Gx):
@@ -199,7 +195,7 @@ def graph_from_df(df, kind="custom", graph_name=""):
     """
     
     if kind == "nx" or kind == "networkx":
-        G = nx.DiGraph()
+        G = nx.Graph()
     else:
         G = Graph()
         G.name = graph_name
@@ -255,7 +251,33 @@ def is_dense(G):
     """
     
     return len(G.edges) >= 0.5 * len(G.nodes)
- 
+
+
+def filter_graph_by_time(G, time_interval):
+    """
+    Filters a graph by only considering
+    edges within the provided time interval
+    
+    Arguments
+        G : graph
+        time_interval : list-like with dates as Timestamp objects
+    
+    Returns
+        filtered graph
+    """
+    
+    Gf = Graph()
+    
+    time_start = time_interval[0]
+    time_end = time_interval[1]
+    
+    for (u, v) in G.edges:   
+        if G[u][v]["time"] > time_start and G[u][v]["time"] < time_end:
+            Gf.add_edge(u, v)
+            Gf[u][v] = G[u][v]
+            
+    return Gf
+
 
 def merge_edges(a, b):
     """
