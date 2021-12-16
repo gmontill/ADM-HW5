@@ -207,7 +207,7 @@ def pagerank(G, node):
     # normalize so it sums up to 1
     princ_eigenvec = princ_eigenvec / sum(princ_eigenvec)
     
-    # component in left_eigenvec corresponding to that node
+    # component in princ_eigenvec corresponding to that node
     prob = np.real(princ_eigenvec[index_of_node(G, node)])
     
     return prob
