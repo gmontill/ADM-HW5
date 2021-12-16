@@ -29,6 +29,7 @@ class Graph:
         self.edges = []
         
         # whether the graph is directed or undirected
+        # (to double-check and update use the is_directed function)
         self.directed = True
         
         return
