@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 class Graph:
     """
-    Implementation of a directed graph
+    Implementation of a graph
     """
     
     def __init__(self, name = ""):  
@@ -34,6 +34,11 @@ class Graph:
         return
     
     def __len__(self):
+        """
+        Returns the number of nodes
+        in the graph
+        """
+        
         return len(self.nodes.keys())
     
     def __getitem__(self, label):
