@@ -544,3 +544,61 @@ def plot_neighbors(G, central_node,
     
     return plt
 
+
+def plot_subgraph(G, nodes, filename=""):
+    """
+    Plots a subgraph of the given graph
+    with the given nodes/edges
+    
+    Arguments
+        G        : graph
+        nodes    : (list) nodes to be plotted
+        filename : (str) output of the plot to ext file
+        
+     Returns
+         matplotlib.pyplot object
+    """
+    
+    nodes = list(map(str, nodes))
+    
+    plt.figure(figsize=(0.8*len(nodes), 0.8*len(nodes)))
+    plt.rc('font', size=15)
+    
+    # random coordinates for each of the nodes
+    points = {node: tuple(map(float, np.random.normal((2,1))))
+                     for node in nodes}
+    
+    # edges between the given nodes
+    edges = [edge for edge in G.edges 
+             if edge[0] in nodes and edge[1] in nodes]
+    
+    # segments
+    for node in points.keys():   
+        for edge in edges:
+            if node in edge:
+                x1, y1 = points[edge[0]]
+                x2, y2 = points[edge[1]]
+                
+                plt.plot([x1, x2] ,[y1, y2], 
+                         color="black",
+                         linewidth=1.2)
+                
+                # arrows
+                if G.directed:
+                    plt.arrow(x1, y1, (x2-x1)*0.5, (y2-y1)*0.5,
+                              width=0.020,                    
+                              length_includes_head=False,
+                              edgecolor="white",                 
+                              facecolor="black")
+     
+    # nodes
+    for node, (x,y) in points.items():   
+        plt.plot(x, y, marker="o", markersize=20)
+        plt.text(x, y, node)
+            
+    plt.axis('off')
+    
+    if filename:
+        plt.savefig(filename)
+    
+    return plt
