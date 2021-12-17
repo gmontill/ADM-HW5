@@ -21,20 +21,37 @@ def func_selector(G, func_num):
         
     elif func_num == 2:
         
-        node = input("Node")
+        node = input("Node: ")
         
         # add try/except
-        time_start = pd.to_datetime(input("Time start [yyyy-mm-dd]"), format='%Y-%m-%d')
-        time_end = pd.to_datetime(input("Time end [yyyy-mm-dd]"), format='%Y-%m-%d')
+        time_start = pd.to_datetime(input("Time start [yyyy-mm-dd]: "), format='%Y-%m-%d')
+        time_end = pd.to_datetime(input("Time end [yyyy-mm-dd]: "), format='%Y-%m-%d')
         
         Gf = graph.filter_graph_by_time(G, [time_start, time_end])
         
-        metric = input("Metric [btw | pagerank | cc | dc]")
+        metric = input("Metric [btw | pagerank | cc | dc]: ")
         
         return best_users(Gf, metric, node)
         
     elif func_num == 3:
-        pass
+        start = input("Start Node: ")
+        end = input("End Node: ")
+        
+        users = []
+        n = ''
+        while n != '0':
+            n = input("Insert nodes (0 to terminate): ")
+            if(n != 0):
+                users.append(n)
+        
+        time_start = pd.to_datetime(input("Time start [yyyy-mm-dd]: "), format='%Y-%m-%d')
+        time_end = pd.to_datetime(input("Time end [yyyy-mm-dd]: "), format='%Y-%m-%d')
+        
+        Gf = G
+        if (time_start != '' and time_end != ''):
+            Gf = graph.filter_graph_by_time(G, [time_start, time_end])
+        
+        ord_route(Gf, users, start, end)
     elif func_num == 4:
         pass
 
@@ -80,22 +97,15 @@ def shortest_path(G, start, goal):
     while queue:
         path = queue.pop(0)
         node = path[-1]
-        
-        ########
-        # neighbors non cambiano tra dir e indir
-        # mentre gli edges sì
-        # quale va usato???
-        # se va usato edges meglio rinominare
-        # qua sotto "neighbor" con "target"
-        ########
+
         if node not in seen:
             neighbours = G[node]
-            for neighbour in neighbours:
+            for target in neighbours:
                 #print(neighbour)
                 new = list(path)
-                new.append(neighbour)
+                new.append(target)
                 queue.append(new)
-                if neighbour == goal:
+                if target == goal:
                     return new
             seen.append(node)
     return
@@ -126,9 +136,9 @@ def beetweenness(G, v):
 def closeness(G, u):
     summ = 0
     for v in G.nodes:
-        path, distance = shortest_path(G, u, v)
-        if(distance != 0):
-            summ += distance
+        path = shortest_path(G, u, v)
+        if(path):
+            summ += len(path)
     if(summ != 0): 
         return((len(G.nodes)-1)/summ)
     else:
@@ -237,7 +247,23 @@ def best_users(G, metric, node):
         return pagerank(G, node)
     elif (metric == 'dc'):
         return degree_centrality(G, node)
-        
     
-                
-            
+def ord_route(G, users, start, end):
+    path_ste = shortest_path(G, start, end)
+    if path_ste:
+        print("Not possible to find the ordered route because start and stop can't be connected!")
+        return
+    
+    out_path= []
+    out_path.append(start)
+    users.insert(0, start)
+    users.append(end)
+    
+    for u in range(len(users) - 1):
+        path = shortest_path(G, users[u], users[u+1])
+        if path:
+            print(f"Not possible to find the ordered route because {users[u]} and {users[u+1]} can't be connected")
+        out_path += path[1:]
+    
+    return out_path
+        
