@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from queue import deque, PriorityQueue
+from queue import deque
 from scipy.linalg import eig
 import graph
 
