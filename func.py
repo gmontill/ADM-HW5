@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from queue import deque
 from scipy.linalg import eig
 import graph
 
@@ -37,21 +38,15 @@ def func_selector(G, func_num):
         start = input("Start Node: ")
         end = input("End Node: ")
         
-        users = []
-        n = ''
-        while n != '0':
-            n = input("Insert nodes (0 to terminate): ")
-            if(n != 0):
-                users.append(n)
+        users = input("Nodes to be visited (comma-separated)").split(",")
         
         time_start = pd.to_datetime(input("Time start [yyyy-mm-dd]: "), format='%Y-%m-%d')
         time_end = pd.to_datetime(input("Time end [yyyy-mm-dd]: "), format='%Y-%m-%d')
         
-        Gf = G
         if (time_start != '' and time_end != ''):
             Gf = graph.filter_graph_by_time(G, [time_start, time_end])
-        
-        ord_route(Gf, users, start, end)
+            ord_route(Gf, users, start, end)
+            
     elif func_num == 4:
         pass
 
@@ -89,48 +84,101 @@ def overall_features(G):
     return table, density
    
     
-def shortest_path(G, start, goal):
-    seen = []
-    queue = [[start]]
-    if start == goal:
-        return
-    while queue:
-        path = queue.pop(0)
-        node = path[-1]
+# def shortest_path(G, start, goal):
+#     seen = []
+#     queue = [[start]]
+#     if start == goal:
+#         return
+#     while queue:
+#         path = queue.pop(0)
+#         node = path[-1]
+# 
+#         if node not in seen:
+#             neighbours = G[node]
+#             for target in neighbours:
+#                 #print(neighbour)
+#                 new = list(path)
+#                 new.append(target)
+#                 queue.append(new)
+#                 if target == goal:
+#                     return new
+#             seen.append(node)
+#     return
 
-        if node not in seen:
-            neighbours = G[node]
-            for target in neighbours:
-                #print(neighbour)
-                new = list(path)
-                new.append(target)
-                queue.append(new)
-                if target == goal:
-                    return new
-            seen.append(node)
-    return
+# dijkstra 
+def shortest_path(G, start, goal):
+    
+    start = str(start)
+    goal = str(goal)
+    
+    if start == goal:
+        return [start, goal]
+    
+    visited = {str(node):False for node in G.nodes.keys()}
+    dist = {str(node):len(G.edges) for node in G.nodes.keys()}
+    prev = {str(node):None for node in G.nodes.keys()}
+    path = []
+    
+    visited[start] = True
+    dist[start] = 0
+    
+    Q = deque()
+    Q.append(start)
+    
+    while Q:
+        
+        node = Q.popleft()    
+        
+        if node == goal:
+            v = prev[goal]
+            
+            while v != start:
+                path.insert(1, v)
+                v = prev[v]  
+                
+            path.insert(0, start)
+            path.append(goal)
+            
+            return path
+        
+        for target in G[node].keys():
+            
+            if not visited[target]:
+                visited[target] = True   
+                
+                if dist[target] > dist[node] + G[node][target]["weight"]:
+                    
+                    dist[target] = dist[node] + G[node][target]["weight"]
+                    prev[target] = node
+                    
+                    Q.append(target)
+    
+    return []
  
     
-def beetweenness(G, v):
-    summ_v = 0
-    summ = 0
-    count = 0
-    
-    for p1 in G.nodes:
-        for p2 in G.nodes:
-            path = shortest_path(G, p1, p2)
-            if(path and (len(path) != float('inf') or len(path) != 0)):
-                print(len(path))
-                print(path)
-                summ += 1
-                if(v in path):
-                    summ_v += count
-            else:
-                break
-    if(summ != 0):
-        return summ_v/summ
-    else:
-        print('errore, denominatore = 0')
+# def betweenness(G, v):
+#     summ_v = 0
+#     summ = 0
+#     count = 0
+#     
+#     for p1 in G.nodes:
+#         for p2 in G.nodes:
+#             path = shortest_path(G, p1, p2)
+#             if(path and (len(path) != float('inf') or len(path) != 0)):
+#                 # print(len(path))
+#                 # print(path)
+#                 summ += 1
+#                 if(v in path):
+#                     summ_v += count
+#             else:
+#                 break
+#     if(summ != 0):
+#         return summ_v/summ
+#     else:
+#         print('errore, denominatore = 0')
+
+def betweenness(G, v):
+    pass
 
         
 def closeness(G, u):
@@ -240,7 +288,7 @@ def best_users(G, metric, node):
     """
 
     if (metric == 'btw'): 
-        return beetweenness(G, node)
+        return betweenness(G, node)
     elif (metric == 'cc'): 
         return closeness(G, node)
     elif (metric == 'pagerank'): 
@@ -250,7 +298,7 @@ def best_users(G, metric, node):
     
 def ord_route(G, users, start, end):
     path_ste = shortest_path(G, start, end)
-    if path_ste:
+    if not path_ste:
         print("Not possible to find the ordered route because start and stop can't be connected!")
         return
     
@@ -261,9 +309,11 @@ def ord_route(G, users, start, end):
     
     for u in range(len(users) - 1):
         path = shortest_path(G, users[u], users[u+1])
-        if path:
+        if not path:
             print(f"Not possible to find the ordered route because {users[u]} and {users[u+1]} can't be connected")
         out_path += path[1:]
+    
+    print(out_path)
     
     return out_path
         

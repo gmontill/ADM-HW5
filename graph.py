@@ -545,7 +545,7 @@ def plot_neighbors(G, central_node,
     return plt
 
 
-def plot_subgraph(G, nodes, filename=""):
+def plot_subgraph(G, nodes=[], filename=""):
     """
     Plots a subgraph of the given graph
     with the given nodes/edges
@@ -559,7 +559,11 @@ def plot_subgraph(G, nodes, filename=""):
          matplotlib.pyplot object
     """
     
-    nodes = list(map(str, nodes))
+    if nodes:
+        nodes = list(map(str, nodes))  
+    else:
+        rand_node = random.choice(list(G.nodes.keys()))
+        nodes = list(G.neighbors[rand_node])
     
     plt.figure(figsize=(0.8*len(nodes), 0.8*len(nodes)))
     plt.rc('font', size=15)
