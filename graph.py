@@ -218,7 +218,7 @@ def graph_from_df(df, kind="custom", graph_name=""):
             G.add_edge(src, tgt)         
             try:
                 G[src][tgt]["time"] = row["timestamp"]
-                G[src][tgt]["weight"] = 1
+                G[src][tgt]["weight"] = 3
             except KeyError:
                 pass
  
@@ -316,18 +316,20 @@ def merge_edges(a, b):
         return a
     
     c = a.copy()
+
         
     # for every key in the 'b' dictionary
     # checks if that key was already present in 'a'
     # and if the value of its time is lower 
     # than what was already present, and in that case replaces it
-    # and sums the weights of the two;
-    # if not already present then adds it
+    # and updates the weight
+    # remark: if more than three graphs are updated
+    # the final weight may get <= 0
     for k in b.keys():    
         try:         
             if b[k]["time"] < c[k]["time"]:
                 c[k]["time"] = b[k]["time"]
-                c[k]["weight"] = a[k]["weight"] + b[k]["weight"]
+                c[k]["weight"] = 2 - np.abs(a[k]["weight"] - b[k]["weight"])
                 
         except KeyError:            
             c[k] = {}
