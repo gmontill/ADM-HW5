@@ -96,28 +96,7 @@ def overall_features(G):
     density = [G.degree(node) for node in G.nodes.keys()]
         
     return table, density
-   
-    
-# def shortest_path(G, start, goal):
-#     seen = []
-#     queue = [[start]]
-#     if start == goal:
-#         return
-#     while queue:
-#         path = queue.pop(0)
-#         node = path[-1]
-# 
-#         if node not in seen:
-#             neighbours = G[node]
-#             for target in neighbours:
-#                 #print(neighbour)
-#                 new = list(path)
-#                 new.append(target)
-#                 queue.append(new)
-#                 if target == goal:
-#                     return new
-#             seen.append(node)
-#     return
+
 
 # dijkstra 
 def shortest_path(G, start, goal):
