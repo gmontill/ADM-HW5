@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from queue import deque
+from queue import deque, PriorityQueue
 from scipy.linalg import eig
 import graph
 
@@ -48,7 +48,21 @@ def func_selector(G, func_num):
             ord_route(Gf, users, start, end)
             
     elif func_num == 4:
-        pass
+        time_start1 = pd.to_datetime(input("Time start for the 1st interval [yyyy-mm-dd]: "), format='%Y-%m-%d')
+        time_end1 = pd.to_datetime(input("Time end for the 1st interval [yyyy-mm-dd]: "), format='%Y-%m-%d')
+
+        time_start2 = pd.to_datetime(input("Time start for the 2nd interval [yyyy-mm-dd]: "), format='%Y-%m-%d')
+        time_end2 = pd.to_datetime(input("Time end for the 2nd interval [yyyy-mm-dd]: "), format='%Y-%m-%d')
+
+        Gf1 = graph.filter_graph_by_time(G, [time_start1, time_end1])
+        Gf2 = graph.filter_graph_by_time(G, [time_start2, time_end2])
+
+        user1 = user_finder(Gf1, Gf2)
+        user2  = user_finder(Gf2, Gf1)
+
+        Gf = graph.merge_graphs(Gf1, Gf2)
+
+        return disc_graph(Gf, user1, user2)
 
     return
     
@@ -154,31 +168,53 @@ def shortest_path(G, start, goal):
                     Q.append(target)
     
     return []
- 
+
+
+#https://www.baeldung.com/cs/graph-number-of-shortest-paths
+def num_of_shortest_paths(G, start, goal, intermed=None):
     
-# def betweenness(G, v):
-#     summ_v = 0
-#     summ = 0
-#     count = 0
-#     
-#     for p1 in G.nodes:
-#         for p2 in G.nodes:
-#             path = shortest_path(G, p1, p2)
-#             if(path and (len(path) != float('inf') or len(path) != 0)):
-#                 # print(len(path))
-#                 # print(path)
-#                 summ += 1
-#                 if(v in path):
-#                     summ_v += count
-#             else:
-#                 break
-#     if(summ != 0):
-#         return summ_v/summ
-#     else:
-#         print('errore, denominatore = 0')
+    dist = {str(node):len(G.edges) for node in G.nodes.keys()}
+    paths = {str(node):0 for node in G.nodes.keys()}
+    
+    priority_q = deque()
+    priority_q.append((0, start))
+    
+    dist[start] = 0
+    paths[start] = 1
+    
+    while priority_q:
+        length, current = priority_q.pop()
+        
+        for target in G[current].keys():
+            weight = G[current][target]["weight"]
+            
+            if dist[target] > dist[current] + weight:
+                priority_q.append((length, target))
+                dist[target] = dist[current] + weight
+                paths[target] = paths[current]
+
+            elif dist[target] == dist[current] + weight:
+                paths[target] += paths[current]
+
+    if intermed:
+        return paths[goal], paths[intermed]
+    else:
+        return paths[goal]
+        
 
 def betweenness(G, v):
-    pass
+    
+    btw = 0
+    
+    for s in G.nodes.keys():
+        for t in G.nodes.keys():
+            if s != t and t != v and s != v:
+                num_sp = num_of_shortest_paths(G, start=s, goal=t, intermed=v)
+                if num_sp[0]:
+                    btw += num_sp[1] / num_sp[0]                 
+                
+    return btw
+            
 
         
 def closeness(G, u):
@@ -271,6 +307,28 @@ def pagerank(G, node):
     return prob
 
 
+def ord_route(G, users, start, end):
+    path_ste = shortest_path(G, start, end)
+    if not path_ste:
+        print("Not possible to find the ordered route because start and stop can't be connected!")
+        return
+    
+    out_path= []
+    out_path.append(start)
+    users.insert(0, start)
+    users.append(end)
+    
+    for u in range(len(users) - 1):
+        path = shortest_path(G, users[u], users[u+1])
+        if not path:
+            print(f"Not possible to find the ordered route because {users[u]} and {users[u+1]} can't be connected")
+        out_path += path[1:]
+    
+    print(out_path)
+    
+    return out_path
+
+
 def best_users(G, metric, node):
     """
     Returns the value of the given 
@@ -295,25 +353,38 @@ def best_users(G, metric, node):
         return pagerank(G, node)
     elif (metric == 'dc'):
         return degree_centrality(G, node)
-    
-def ord_route(G, users, start, end):
-    path_ste = shortest_path(G, start, end)
-    if not path_ste:
-        print("Not possible to find the ordered route because start and stop can't be connected!")
-        return
-    
-    out_path= []
-    out_path.append(start)
-    users.insert(0, start)
-    users.append(end)
-    
-    for u in range(len(users) - 1):
-        path = shortest_path(G, users[u], users[u+1])
-        if not path:
-            print(f"Not possible to find the ordered route because {users[u]} and {users[u+1]} can't be connected")
-        out_path += path[1:]
-    
-    print(out_path)
-    
-    return out_path
-        
+
+
+def user_finder(G1, G2):
+    '''
+    Parameters
+    ----------
+    G1 : Graph 1
+    G2 : Graph 2
+    Returns
+    -------
+    A node (user) which is in G1 but not in G2
+    '''
+    for user in G1.nodes:
+        if user not in G2.nodes:
+            return user
+    return f"Couldn't find a node present only in {G1}"
+
+
+def disc_graph(G, user1, user2):
+    path = shortest_path(G, user1, user2)
+
+    if path == []:
+        return "The nodes are already disconnected"
+    w = 0
+    out = 0 
+    edge = [path[0], path[1]]
+    while path != []:
+        for n in range(len(path) - 1):
+            # aggiungere controllo sui pesi
+            edge = [path[n], path[n+1]]
+        out += 1
+        G.remove_edge(*edge)
+        path = shortest_path(G, user1, user2)
+
+    return f"the minimum number of links is {out}" 
