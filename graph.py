@@ -316,8 +316,7 @@ def merge_edges(a, b):
         return a
     
     c = a.copy()
-
-        
+      
     # for every key in the 'b' dictionary
     # checks if that key was already present in 'a'
     # and if the value of its time is lower 
@@ -468,12 +467,9 @@ def plot_neighbors(G, central_node,
     ######### determine which nodes/edges to plot
     ######### and what coords they should have
 
-    if neighbors:
-        
+    if neighbors:    
         neighbors = list(map(str, neighbors))
-        
     else:
-        
         if max_neighbors > len(G.neighbors[central_node]):
             max_neighbors = len(G.neighbors[central_node])
 
@@ -508,8 +504,6 @@ def plot_neighbors(G, central_node,
     
     plt.xlim((-1.2,1.2))
     plt.ylim((-1.2,1.2))
-    
-    # ALSO ADD WEIGHTS TO THE VISUALIZATION?
     
     # arrows/segments
     for x, y, label in points[:-1]:

@@ -17,6 +17,7 @@ def func_selector(G, func_num):
     Returns
         output of selected functionality
     """
+    
     if func_num == 1:
         return overall_features(G)
         
@@ -24,9 +25,10 @@ def func_selector(G, func_num):
         
         node = input("Node: ")
         
-        # add try/except
-        time_start = pd.to_datetime(input("Time start [yyyy-mm-dd]: "), format='%Y-%m-%d')
-        time_end = pd.to_datetime(input("Time end [yyyy-mm-dd]: "), format='%Y-%m-%d')
+        time_start = pd.to_datetime(input("Time start [yyyy-mm-dd]: "), 
+                                    format='%Y-%m-%d')
+        time_end = pd.to_datetime(input("Time end [yyyy-mm-dd]: "), 
+                                  format='%Y-%m-%d')
         
         Gf = graph.filter_graph_by_time(G, [time_start, time_end])
         
@@ -40,19 +42,25 @@ def func_selector(G, func_num):
         
         users = input("Nodes to be visited (comma-separated)").split(",")
         
-        time_start = pd.to_datetime(input("Time start [yyyy-mm-dd]: "), format='%Y-%m-%d')
-        time_end = pd.to_datetime(input("Time end [yyyy-mm-dd]: "), format='%Y-%m-%d')
+        time_start = pd.to_datetime(input("Time start [yyyy-mm-dd]: "), 
+                                    format='%Y-%m-%d')
+        time_end = pd.to_datetime(input("Time end [yyyy-mm-dd]: "), 
+                                  format='%Y-%m-%d')
         
         if (time_start != '' and time_end != ''):
             Gf = graph.filter_graph_by_time(G, [time_start, time_end])
-            ord_route(Gf, users, start, end)
+            return ord_route(Gf, users, start, end)
             
     elif func_num == 4:
-        time_start1 = pd.to_datetime(input("Time start for the 1st interval [yyyy-mm-dd]: "), format='%Y-%m-%d')
-        time_end1 = pd.to_datetime(input("Time end for the 1st interval [yyyy-mm-dd]: "), format='%Y-%m-%d')
+        time_start1 = pd.to_datetime(input("Time start for the 1st interval [yyyy-mm-dd]: "), 
+                                     format='%Y-%m-%d')
+        time_end1 = pd.to_datetime(input("Time end for the 1st interval [yyyy-mm-dd]: "), 
+                                   format='%Y-%m-%d')
 
-        time_start2 = pd.to_datetime(input("Time start for the 2nd interval [yyyy-mm-dd]: "), format='%Y-%m-%d')
-        time_end2 = pd.to_datetime(input("Time end for the 2nd interval [yyyy-mm-dd]: "), format='%Y-%m-%d')
+        time_start2 = pd.to_datetime(input("Time start for the 2nd interval [yyyy-mm-dd]: "), 
+                                     format='%Y-%m-%d')
+        time_end2 = pd.to_datetime(input("Time end for the 2nd interval [yyyy-mm-dd]: "), 
+                                   format='%Y-%m-%d')
 
         Gf1 = graph.filter_graph_by_time(G, [time_start1, time_end1])
         Gf2 = graph.filter_graph_by_time(G, [time_start2, time_end2])
@@ -98,8 +106,20 @@ def overall_features(G):
     return table, density
 
 
-# dijkstra 
 def shortest_path(G, start, goal):
+    """
+    Finds the shortest path between
+    two nodes of a weighted graph
+    using the Dijkstra algorithm
+    
+    Arguments
+        G     : a weighted graph
+        start : the starting node
+        goal  : the target node
+    
+    Returns
+        (list) list of nodes in the path
+    """
     
     start = str(start)
     goal = str(goal)
@@ -149,8 +169,32 @@ def shortest_path(G, start, goal):
     return []
 
 
-#https://www.baeldung.com/cs/graph-number-of-shortest-paths
 def num_of_shortest_paths(G, start, goal, intermed=None):
+    """
+    Computes the number of shortest paths
+    between two nodes of a weighted graph;
+    two paths are considered equally short
+    if the total weights of the edges is the same,
+    regardless of the actual number of edges.
+    
+    The following code is based on the pseudocode
+    on this page:
+    https://www.baeldung.com/cs/graph-number-of-shortest-paths
+    
+    Arguments
+        G        : a weighted graph
+        start    : starting node
+        goal     : target node
+        intermed : if indicated the function also returns
+                   the number of paths start -> goal
+                   which also include this node
+    
+    Returns
+        (int) num of shortest paths
+        or if 'intermed' is indicated
+        (tuple) num of shortest paths and
+                how many of those include 'intermed'
+    """ 
     
     dist = {str(node):len(G.edges) for node in G.nodes.keys()}
     paths = {str(node):0 for node in G.nodes.keys()}
@@ -182,6 +226,18 @@ def num_of_shortest_paths(G, start, goal, intermed=None):
         
 
 def betweenness(G, v):
+    """
+    Computes the betweenness centrality
+    of a node in a weighted graph,
+    as defined by Freeman (1977), Anthonisse (1971)
+    
+    Arguments
+        G : a weighted graph
+        v : a node
+        
+    Returns
+        (float) normalized betweenness centrality
+    """
     
     btw = 0
     
@@ -190,13 +246,29 @@ def betweenness(G, v):
             if s != t and t != v and s != v:
                 num_sp = num_of_shortest_paths(G, start=s, goal=t, intermed=v)
                 if num_sp[0]:
-                    btw += num_sp[1] / num_sp[0]                 
-                
-    return btw
-            
-
+                    btw += num_sp[1] / num_sp[0]  
+                    
+    # normalization
+    if G.directed:            
+        return btw / ((len(G)-1) * (len(G)-2))
+    else:
+        return 2 * btw / ((len(G)-1) * (len(G)-2))
         
+
 def closeness(G, u):
+    """
+    Computes the closeness centrality
+    of a node in graph, as defined by
+    Sabidussi (1966)
+    
+    Arguments
+        G : a graph
+        u : a node
+        
+    Returns
+        (float) normalized closeness centrality
+    """
+    
     summ = 0
     for v in G.nodes:
         path = shortest_path(G, u, v)
@@ -212,7 +284,7 @@ def closeness(G, u):
 def degree_centrality(G, v):
     """
     Degree centrality of a node,
-    defined as the defined of the node
+    defined as the degree of the node
     normalized by the max possible degree
     
     Arguments
@@ -275,37 +347,16 @@ def pagerank(G, node):
     
     # eigenvector for that eigenvalue
     # i.e. the principal eigenvector
-    princ_eigenvec = left_eigenvec[:,max_eigenval_idx]
+    princ_eigenvec = left_eigenvec[:, max_eigenval_idx]
     
-    # normalize so it sums up to 1
+    # normalize so it sums up to 1 
+    # (it's a supposed to be a distribution)
     princ_eigenvec = princ_eigenvec / sum(princ_eigenvec)
     
-    # component in princ_eigenvec corresponding to that node
+    # component in 'princ_eigenvec' corresponding to that node
     prob = np.real(princ_eigenvec[index_of_node(G, node)])
     
     return prob
-
-
-def ord_route(G, users, start, end):
-    path_ste = shortest_path(G, start, end)
-    if not path_ste:
-        print("Not possible to find the ordered route because start and stop can't be connected!")
-        return
-    
-    out_path= []
-    out_path.append(start)
-    users.insert(0, start)
-    users.append(end)
-    
-    for u in range(len(users) - 1):
-        path = shortest_path(G, users[u], users[u+1])
-        if not path:
-            print(f"Not possible to find the ordered route because {users[u]} and {users[u+1]} can't be connected")
-        out_path += path[1:]
-    
-    print(out_path)
-    
-    return out_path
 
 
 def best_users(G, metric, node):
@@ -334,19 +385,57 @@ def best_users(G, metric, node):
         return degree_centrality(G, node)
 
 
-def user_finder(G1, G2):
-    '''
-    Parameters
-    ----------
-    G1 : Graph 1
-    G2 : Graph 2
+def ord_route(G, users, start, end):
+    """
+    Finds the shortest path between two nodes
+    which also visits a list of other nodes in order
+    
+    Arguments
+        G     : a graph
+        users : list of nodes to be visited in order
+        start : starting node
+        end   : target node
+        
     Returns
-    -------
-    A node (user) which is in G1 but not in G2
-    '''
+        (list) ordered route 
+    """
+    
+    path_ste = shortest_path(G, start, end)
+    if not path_ste:
+        print("Not possible to find the ordered route because start and stop can't be connected!")
+        return
+    
+    out_path= []
+    out_path.append(start)
+    users.insert(0, start)
+    users.append(end)
+    
+    for u in range(len(users) - 1):
+        path = shortest_path(G, users[u], users[u+1])
+        if not path:
+            print(f"Not possible to find the ordered route because {users[u]} and {users[u+1]} can't be connected")
+        out_path += path[1:]
+    
+    print(out_path)
+    
+    return out_path
+
+
+def user_finder(G1, G2):
+    """
+    Finds a node (a user) which is only in one
+    of the two graphs provided
+    
+    Arguments
+        G1, G2 : two graphs
+        
+    Returns
+        a node in G1 and not in G2
+    """
     for user in G1.nodes:
         if user not in G2.nodes:
             return user
+
     return f"Couldn't find a node present only in {G1}"
 
 
