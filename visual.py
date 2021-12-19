@@ -1,3 +1,6 @@
+import pandas as pd
+import graph
+import func
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -30,30 +33,62 @@ def overall_features(G, table, density):
     return plt
 
 
-def draw_short_ord_route(result):
-
-    '''
-    result: result list of the funct 3 
+def metric_evolution(G, node, metrics):
+    """
+    Computes and then plots the evolution
+    of the given metrics for a certain node
+    in a graph
     
-    output a graph that connects 
-    '''
-
-    plt.rcParams["figure.figsize"]=(15,15)
-    G = nx.DiGraph()
-    for i in range(len(result)-1):
-        G.add_edge(result[i],result[i+1], label=i)
-
-    edge_labels = nx.get_edge_attributes(G, 'label')
-    #print('edge_labels:', edge_labels)
-
-    if not nx.is_empty(G):
-        pos=nx.spring_layout(G)
-
-        nx.draw(G,pos, with_labels=True, font_size=25,connectionstyle='arc3,rad=0.2', arrowsize=25)
-        colors = ["red"] + (["green"] * (len(result) - 1))
-
-        nx.draw_networkx_nodes(G,pos, node_size = 650, node_color=colors)
-
-
-        plt.show()  
+    Arguments
+        G : a graph
+        node : a node
+        metrics : (list) of metrics [dc|cc|btw|pagerank]
         
+    Returns
+        matplotlib.pyplot object
+    """
+    
+    time_start = pd.to_datetime(input("Time start [yyyy-mm-dd]"), format='%Y-%m-%d')
+    time_end = pd.to_datetime(input("Time end [yyyy-mm-dd]"), format='%Y-%m-%d')
+    
+    inters = list(pd.date_range(time_start, time_end, freq = "M"))
+
+    if time_start != inters[0]:
+        inters.insert(0, time_start)
+    if time_end != inters[-1]:
+        inters.append(time_end)
+    
+    inters[0] -= pd.Timedelta('1d')
+    inters = zip(map(lambda d: d + pd.Timedelta('1d'), inters[:-1]), inters[1:])
+    intervals = list(map(lambda t: t[0].strftime('%Y-%m-%d') + ' - ' + t[1].strftime('%Y-%m-%d'), inters))
+    
+    intervals_datetime = []
+    for interval in intervals:
+        int_start, int_end = interval.split(' - ')
+        intervals_datetime.append([pd.to_datetime(int_start, format='%Y-%m-%d'),
+                                   pd.to_datetime(int_end, format='%Y-%m-%d')])
+    
+    plt.figure(figsize = (10,6))
+    
+    plt.xlabel("Time intervals")
+    plt.title(f"Centrality of {node} over time")
+    plt.ylabel("Metric")
+    plt.xticks(ticks=range(len(intervals)), 
+               labels=intervals, 
+               rotation=45)
+        
+    for metric in metrics:
+        values = []
+        for interval in intervals_datetime:
+            Gm = graph.filter_graph_by_time(G, interval)        
+            try:
+                if Gm[node]:
+                    values.append(func.best_users(Gm, metric, node))
+            except KeyError:
+                pass
+        plt.plot(range(len(intervals)), values)
+        plt.scatter(range(len(intervals)), values)
+
+    plt.legend(metrics)
+    
+    return plt

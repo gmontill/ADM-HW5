@@ -40,7 +40,7 @@ def func_selector(G, func_num):
         start = input("Start Node: ")
         end = input("End Node: ")
         
-        users = input("Nodes to be visited (comma-separated)").split(",")
+        users = input("Nodes to be visited (comma-separated): ").split(",")
         
         time_start = pd.to_datetime(input("Time start [yyyy-mm-dd]: "), 
                                     format='%Y-%m-%d')
@@ -64,9 +64,16 @@ def func_selector(G, func_num):
 
         Gf1 = graph.filter_graph_by_time(G, [time_start1, time_end1])
         Gf2 = graph.filter_graph_by_time(G, [time_start2, time_end2])
+        
+        user1 = input("User 1: ")
+        user2 = input("User 2: ")
 
-        user1 = user_finder(Gf1, Gf2)
-        user2  = user_finder(Gf2, Gf1)
+        if not user1:
+            user1 = user_finder(Gf1, Gf2)
+            print(f"\nA user unique to G_1 is {user1}")
+        if not user2:
+            user2  = user_finder(Gf2, Gf1)
+            print(f"A user unique to G_2 is {user2}\n")
 
         Gf = graph.merge_graphs(Gf1, Gf2)
 
@@ -104,6 +111,43 @@ def overall_features(G):
     density = [G.degree(node) for node in G.nodes.keys()]
         
     return table, density
+
+
+def shortest_path_uw(G, start, goal):
+    """
+    Computes the shortest path between
+    two nodes in an unweighted graph
+    
+    Arguments
+        G     : graph
+        start : starting node
+        goal  : target node
+        
+    Returns
+        (list) shortest path
+    """
+    
+    seen = []
+    queue = [[start]]
+    
+    if start == goal:
+        print("Start and goal are the same node!")
+        return []
+    
+    while queue:
+        path = queue.pop(0)
+        node = path[-1]
+
+        if node not in seen:
+            neighbours = G[node]
+            for target in neighbours:
+                new = list(path)
+                new.append(target)
+                queue.append(new)
+                if target == goal:
+                    return new
+            seen.append(node)
+    return []
 
 
 def shortest_path(G, start, goal):
@@ -313,13 +357,32 @@ def index_of_node(G, node):
     
     return np.where(np.array(list(G.nodes.keys()))==node)[0][0]
 
+def adj_function(G, u, v):
+    """
+    Computes the ratio between the
+    number of edges outbound from node v to node u 
+    to the total number of outbound links of node v
+    
+    Arguments
+        u : a node
+        v : a node
+        
+    Returns
+        (float)
+    """
+    try:
+        if G[v][u]:
+            return 1/len(G[v].keys())
+    except KeyError:
+        return 0
+    
 
 def pagerank(G, node):
     """
     Computes the rank of a node
     with a PageRank algorithm
     by finding the eigenvalues and
-    eigenvectors of the adjacency matrix;
+    eigenvectors of a modified adjacency matrix;
     the rank will be the component of the
     principal eigenvector corresponding
     to the given node
@@ -332,29 +395,35 @@ def pagerank(G, node):
         (float) rank of the node
     """
     
-    # initialize matrix 
+    # damping factor
+    d = 0.85
+    
+    # initialize stochastic matrix 
     stoc_mat = np.zeros([len(G), len(G)])
     
-    # fill with uniform probability
-    for idx, u in enumerate(G.nodes.keys()):
-        for v in G[u]:
-            stoc_mat[idx][index_of_node(G, v)] = 1/len(G[u])
-            
-    eigenval, left_eigenvec = eig(stoc_mat, left=True, right=False)
+    # fill the matrix
+    for i, u in enumerate(G.nodes.keys()):
+        for j, v in enumerate(G.nodes.keys()):
+            stoc_mat[i][j] = adj_function(G, u, v)
+    
+    M = d*stoc_mat + np.ones([len(G),len(G)])*(1-d)/len(G)
+
+    # eigenvalues and right eigenvec of M
+    eigenval, eigenvec = eig(M, right=True)
     
     # index in eigenval of the largest eigenvalue
     max_eigenval_idx = np.argmax(eigenval)
     
     # eigenvector for that eigenvalue
-    # i.e. the principal eigenvector
-    princ_eigenvec = left_eigenvec[:, max_eigenval_idx]
+    # i.e. the dominant eigenvector
+    dom_eigenvec = eigenvec[:, max_eigenval_idx]
     
     # normalize so it sums up to 1 
-    # (it's a supposed to be a distribution)
-    princ_eigenvec = princ_eigenvec / sum(princ_eigenvec)
+    # (it's supposed to be a distribution)
+    dom_eigenvec = dom_eigenvec / sum(dom_eigenvec)
     
-    # component in 'princ_eigenvec' corresponding to that node
-    prob = np.real(princ_eigenvec[index_of_node(G, node)])
+    # component in 'dom_eigenvec' corresponding to that node
+    prob = np.real(dom_eigenvec[index_of_node(G, node)])
     
     return prob
 
@@ -416,8 +485,6 @@ def ord_route(G, users, start, end):
             print(f"Not possible to find the ordered route because {users[u]} and {users[u+1]} can't be connected")
         out_path += path[1:]
     
-    print(out_path)
-    
     return out_path
 
 
@@ -435,24 +502,53 @@ def user_finder(G1, G2):
     for user in G1.nodes:
         if user not in G2.nodes:
             return user
-
-    return f"Couldn't find a node present only in {G1}"
+    
+    print("Couldn't find a node present only in G1")
+    return
 
 
 def disc_graph(G, user1, user2):
-    path = shortest_path(G, user1, user2)
-
+    """
+    Find the minimum number of edges
+    required to disconnect two users
+    
+    Arguments
+        G     : a graph
+        user1 : a node
+        user2 : a node
+        
+    Returns
+        tuple with:
+            (int)  number of links
+            (list) edges as tuples
+            (list) shortest paths between user1 and user2
+    """
+    
+    path = shortest_path_uw(G, user1, user2)
     if path == []:
         return "The nodes are already disconnected"
-    w = 0
-    out = 0 
-    edge = [path[0], path[1]]
+    
+    paths = []
+    out = 0
+    edge = (path[0], path[1])
+    removed = []
+    
     while path != []:
+        min_w = float('inf')
+        tot_w = 0
+        
         for n in range(len(path) - 1):
-            # aggiungere controllo sui pesi
-            edge = [path[n], path[n+1]]
-        out += 1
-        G.remove_edge(*edge)
-        path = shortest_path(G, user1, user2)
-
-    return f"the minimum number of links is {out}" 
+            if G[str(path[n])][str(path[n+1])]['weight'] <= min_w:
+                min_w = G[str(path[n])][str(path[n+1])]['weight']
+                edge = (path[n], path[n+1])
+        
+        paths.append(path)
+        out += 1    
+        removed.append(edge)
+        G.remove_edge(edge[0], edge[1])
+        
+        path = shortest_path_uw(G, user1, user2)
+        
+    print(f"The minimum number of links required to disconnect the two graphs is {out}")
+    
+    return out, removed, paths

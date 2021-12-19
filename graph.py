@@ -144,6 +144,35 @@ class Graph:
         
         return
     
+    def remove_edge(self, u, v):
+        """
+        Removes an edge
+        
+        Arguments
+            u : a node
+            v : a node
+            
+        Returns
+            none
+        """
+        
+        try:
+            if self[u] and self[v]:
+                pass
+        except KeyError:
+            print("u and v must both be nodes of the graph")
+            return
+        
+        self.edges.remove((u, v))
+        self[u].pop(v, None)
+
+        if not self.directed:
+            self[v].pop(u, None)
+            self.edges.remove((v, u))
+
+        self.neighbors[u].remove(v)
+        self.neighbors[v].remove(u)
+    
     def degree(self, node):
         return len(self.neighbors[node])
 
@@ -256,7 +285,7 @@ def is_dense(G):
         (bool)
     """
     
-    return len(G.edges) >= 0.5 * len(G.nodes)
+    return len(G.edges) >= 0.5 * len(G.nodes)**2
 
 
 def filter_graph_by_time(G, time_interval):
@@ -541,15 +570,19 @@ def plot_neighbors(G, central_node,
     return plt
 
 
-def plot_subgraph(G, nodes=[], filename=""):
+def plot_subgraph(G, nodes=[], highlight_edges=[], highlight_color="blue",
+                  figsize=(), filename=""):
     """
     Plots a subgraph of the given graph
     with the given nodes/edges
     
     Arguments
-        G        : graph
-        nodes    : (list) nodes to be plotted
-        filename : (str) output of the plot to ext file
+        G               : graph
+        nodes           : (list) nodes to be plotted
+        highlight_edges : (list of tuples) which edges to color differently
+        highlight_color : color for the highlight edges
+        figsize         : (tuple) size of the plot
+        filename        : (str) output of the plot to ext file
         
      Returns
          matplotlib.pyplot object
@@ -561,7 +594,11 @@ def plot_subgraph(G, nodes=[], filename=""):
         rand_node = random.choice(list(G.nodes.keys()))
         nodes = list(G.neighbors[rand_node])
     
-    plt.figure(figsize=(0.8*len(nodes), 0.8*len(nodes)))
+    if figsize:
+        plt.figure(figsize=figsize)
+    else:
+        plt.figure(figsize=(0.8*len(nodes), 0.8*len(nodes)))
+        
     plt.rc('font', size=15)
     
     # random coordinates for each of the nodes
@@ -579,8 +616,13 @@ def plot_subgraph(G, nodes=[], filename=""):
                 x1, y1 = points[edge[0]]
                 x2, y2 = points[edge[1]]
                 
+                if edge in highlight_edges:
+                    color=highlight_color
+                else:
+                    color="black"
+                
                 plt.plot([x1, x2] ,[y1, y2], 
-                         color="black",
+                         color=color,
                          linewidth=1.2)
                 
                 # arrows
@@ -589,11 +631,15 @@ def plot_subgraph(G, nodes=[], filename=""):
                               width=0.020,                    
                               length_includes_head=False,
                               edgecolor="white",                 
-                              facecolor="black")
+                              facecolor=color)
      
     # nodes
-    for node, (x,y) in points.items():   
-        plt.plot(x, y, marker="o", markersize=20)
+    for node, (x,y) in points.items():
+        if node in [node for edge in highlight_edges if node in edge]:
+            markersize = 35
+        else:
+            markersize = 20
+        plt.plot(x, y, marker="o", markersize=markersize)
         plt.text(x, y, node)
             
     plt.axis('off')
